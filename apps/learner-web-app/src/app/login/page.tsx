@@ -389,7 +389,25 @@ const LoginPageContent = () => {
           document.cookie = `token=${token}; path=/; secure; SameSite=Strict`;
           await profileComplitionCheck();
           setLoading(false);
-          router.push(landingPage || '/home');
+           if(localStorage.getItem('isAndroidApp') == 'yes' && window.ReactNativeWebView)
+            {
+            //  let refreshToken = localStorage.getItem('refreshTokenForAndroid');
+            //  if (!refreshToken || refreshToken === '') {
+            //    refreshToken = localStorage.getItem('refreshToken');
+            //  }
+            //  window.ReactNativeWebView.postMessage(JSON.stringify({
+            //    type: 'LOGIN_INTO_SELECTED_PROGRAM_EVENT',
+            //    data: {
+            //      userId: userResponse?.userId,
+            //      selectedTenantId: enrolledTenant.tenantId,
+            //      token: localStorage.getItem('token'),
+            //      refreshToken: refreshToken,
+            //    }
+            //  }));
+            router.push(`/programs`);
+            }
+            else
+         router.push(landingPage || '/home');
           return;
         } else {
           // User is not enrolled — look up program name then show modal
@@ -406,7 +424,33 @@ const LoginPageContent = () => {
           localStorage.setItem('userIdName', userResponse?.username);
           localStorage.setItem('firstName', userResponse?.firstName || '');
           localStorage.setItem('roleId', selectedRoleId);
+          localStorage.setItem('tenantId', selectedTenantId || '');
           document.cookie = `token=${token}; path=/; secure; SameSite=Strict`;
+          try {
+            const userDetails = await getUserDetails(userResponse?.userId, true);
+            if (userDetails?.result?.userData?.customFields) {
+              userDetails.result.userData.customFields.forEach((field: any) => {
+                const { label, selectedValues } = field;
+                if (label === 'WHAT_IS_YOUR_PREFERRED_LANGUAGE') {
+                  let preferred = '';
+                  if (Array.isArray(selectedValues) && selectedValues.length > 0) {
+                    const first = selectedValues[0] as unknown;
+                    preferred =
+                      typeof first === 'string'
+                        ? first
+                        : (first as { value?: string })?.value ?? String(first);
+                  } else if (typeof selectedValues === 'string') {
+                    preferred = selectedValues;
+                  }
+                  if (preferred) {
+                    localStorage.setItem('preferred_language', preferred);
+                  }
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Failed to fetch user details for preferred language', error);
+          }
 
           const accountExists = urlQuery.get('AccountExists');
           if (accountExists === 'true') {
